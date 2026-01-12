@@ -10,42 +10,43 @@
         :root { --ios-red: #ff3b30; --ios-yellow: #f7d51d; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; font-family: 'Courier New', monospace; overflow: hidden; color: white; -webkit-user-select: none; }
         
+        /* 預覽視窗 */
         #viewport { position: relative; width: 100%; height: 100%; display: flex; align-items: center; background: #000; }
-        video { width: 100%; height: 100%; object-fit: cover; filter: contrast(1.1) saturate(1.2); transition: transform 0.1s; }
+        video#v { width: 100%; height: 100%; object-fit: cover; filter: contrast(1.1) saturate(1.2); transition: transform 0.1s; }
 
-        /* DV 效果 */
+        /* DV 復古濾鏡 */
         .dv-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 2; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%); background-size: 100% 3px; opacity: 0.3; }
         .noise { position: absolute; inset: 0; z-index: 3; pointer-events: none; background: url('https://media.giphy.com/media/oEI9uWUicKgH6/giphy.gif'); opacity: 0.04; mix-blend-mode: screen; }
 
-        /* 簡約 UI */
-        .ui-text { position: absolute; color: var(--ios-yellow); text-shadow: 2px 2px #000; z-index: 4; font-weight: bold; }
-        #rec-indicator { top: 50px; left: 20px; color: var(--ios-red); display: none; animation: blink 1s infinite; }
+        /* 介面文字 */
+        .ui-text { position: absolute; color: var(--ios-yellow); text-shadow: 2px 2px #000; z-index: 4; font-weight: bold; pointer-events: none; }
+        #rec-indicator { top: 50px; left: 20px; color: var(--ios-red); display: none; animation: blink 1s infinite; font-size: 18px; }
         @keyframes blink { 50% { opacity: 0; } }
         .timestamp { bottom: 180px; left: 20px; font-size: 18px; line-height: 1.2; }
 
-        /* Zoom */
+        /* Zoom 側邊條 */
         .zoom-wrap { position: absolute; right: 15px; top: 40%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: center; z-index: 10; font-family: sans-serif; }
-        .zoom-slider { appearance: none; -webkit-appearance: none; width: 150px; height: 2px; background: rgba(255,255,255,0.4); transform: rotate(-90deg); margin: 70px 0; }
-        .zoom-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 25px; height: 25px; border-radius: 50%; background: white; }
+        .zoom-slider { appearance: none; -webkit-appearance: none; width: 150px; height: 2px; background: rgba(255,255,255,0.4); transform: rotate(-90deg); margin: 70px 0; outline: none; }
+        .zoom-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; border-radius: 50%; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
 
-        /* 模式切換 */
-        .mode-selector { position: absolute; bottom: 130px; width: 100%; display: flex; justify-content: center; gap: 40px; z-index: 5; font-family: -apple-system, sans-serif; font-weight: 600; }
-        .mode { color: rgba(255,255,255,0.4); font-size: 14px; transition: 0.2s; }
+        /* 模式切換器 */
+        .mode-selector { position: absolute; bottom: 130px; width: 100%; display: flex; justify-content: center; gap: 40px; z-index: 5; font-family: -apple-system, sans-serif; font-weight: 600; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+        .mode { color: rgba(255,255,255,0.4); font-size: 14px; transition: 0.2s; padding: 5px 10px; }
         .mode.active { color: var(--ios-yellow); }
 
-        /* 控制欄 */
+        /* 底部控制欄 */
         .controls { position: absolute; bottom: 0; width: 100%; height: 120px; background: rgba(0,0,0,0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); display: flex; align-items: center; justify-content: space-around; z-index: 5; padding-bottom: env(safe-area-inset-bottom); }
-        .btn-side { width: 45px; height: 45px; border-radius: 50%; background: rgba(255,255,255,0.15); border: none; color: white; font-size: 20px; display: flex; align-items: center; justify-content: center; }
+        .btn-side { width: 48px; height: 48px; border-radius: 50%; background: rgba(255,255,255,0.15); border: none; color: white; font-size: 20px; display: flex; align-items: center; justify-content: center; }
         
-        .shutter-btn { width: 72px; height: 72px; border-radius: 50%; background: white; padding: 4px; border: none; outline: none; }
+        .shutter-btn { width: 75px; height: 75px; border-radius: 50%; background: white; padding: 4px; border: none; outline: none; -webkit-tap-highlight-color: transparent; }
         .shutter-inner { width: 100%; height: 100%; border-radius: 50%; transition: 0.2s; }
         .mode-video .shutter-inner { background: var(--ios-red); }
         .mode-photo .shutter-inner { background: white; border: 2px solid #333; }
         .recording .shutter-inner { border-radius: 8px; transform: scale(0.6); }
 
-        /* 預覽遮罩 */
+        /* 預覽圖層 */
         #preview-layer { position: fixed; inset: 0; background: #000; z-index: 1000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
-        .preview-media { width: 100%; max-height: 70vh; border-radius: 8px; object-fit: contain; }
+        .preview-media { width: 100%; max-height: 65vh; border-radius: 8px; object-fit: contain; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
@@ -80,8 +81,11 @@
 
     <div id="preview-layer">
         <div id="media-container" style="width: 100%; display: flex; justify-content: center;"></div>
-        <p style="color: var(--ios-yellow); margin: 25px 0; font-family: 'Courier New'; font-weight: bold; text-align: center;">長按上方內容儲存至相簿<br>LONG PRESS TO SAVE</p>
-        <button onclick="closePreview()" style="background: white; color: black; border: none; padding: 12px 40px; border-radius: 25px; font-weight: bold; font-family: sans-serif;">返回 BACK</button>
+        <div style="text-align: center; margin: 25px 0;">
+            <p style="color: var(--ios-yellow); font-size: 16px; margin: 0; font-weight: bold;">長按上方內容儲存至相簿</p>
+            <p style="color: #666; font-size: 12px; margin: 5px 0;">LONG PRESS TO SAVE VIDEO/PHOTO</p>
+        </div>
+        <button onclick="closePreview()" style="background: white; color: black; border: none; padding: 12px 50px; border-radius: 25px; font-weight: bold; font-family: sans-serif; font-size: 16px;">返回 BACK</button>
     </div>
 
     <script>
@@ -105,7 +109,7 @@
                 });
                 v.srcObject = s;
                 window.stream = s;
-            } catch (e) { alert("請確保已開啟相機權限"); }
+            } catch (e) { alert("請確保 Safari 已授權相機權限"); }
         }
 
         function setMode(m) {
@@ -125,27 +129,32 @@
             const canvas = document.createElement('canvas');
             canvas.width = v.videoWidth; canvas.height = v.videoHeight;
             const ctx = canvas.getContext('2d');
+            
+            // 處理 Zoom 後的拍照畫面
             const scale = parseFloat(z.value);
-            const w = canvas.width / scale;
-            const h = canvas.height / scale;
-            const x = (canvas.width - w) / 2;
-            const y = (canvas.height - h) / 2;
-            ctx.drawImage(v, x, y, w, h, 0, 0, canvas.width, canvas.height);
+            const sw = v.videoWidth / scale;
+            const sh = v.videoHeight / scale;
+            const sx = (v.videoWidth - sw) / 2;
+            const sy = (v.videoHeight - sh) / 2;
+            
+            ctx.drawImage(v, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
             showPreview(canvas.toDataURL('image/jpeg'), 'photo');
         }
 
         function toggleRec() {
             if (!isRec) {
                 chunks = [];
-                // iOS 錄影格式優化
+                // 針對 iOS 優化的 MediaRecorder 設定
                 const options = { mimeType: 'video/mp4' };
                 recorder = new MediaRecorder(window.stream, options);
+                
                 recorder.ondataavailable = e => { if(e.data.size > 0) chunks.push(e.data); };
                 recorder.onstop = () => {
                     const blob = new Blob(chunks, { type: 'video/mp4' });
                     const videoURL = URL.createObjectURL(blob);
                     showPreview(videoURL, 'video');
                 };
+
                 recorder.start();
                 document.getElementById('rec-indicator').style.display = 'block';
                 ctrlBar.classList.add('recording');
@@ -161,7 +170,8 @@
         function showPreview(url, type) {
             const container = document.getElementById('media-container');
             if (type === 'video') {
-                container.innerHTML = `<video src="${url}" class="preview-media" controls playsinline autoplay loop></video>`;
+                // 關鍵：在預覽中使用原生 controls，這樣 iOS 長按才有反應
+                container.innerHTML = `<video src="${url}" class="preview-media" controls playsinline autoplay loop webkit-playsinline></video>`;
             } else {
                 container.innerHTML = `<img src="${url}" class="preview-media">`;
             }
@@ -171,10 +181,14 @@
         function closePreview() {
             document.getElementById('preview-layer').style.display = 'none';
             document.getElementById('media-container').innerHTML = '';
+            // 釋放記憶體避免卡頓
+            if (currentMode === 'video' && container.querySelector('video')) {
+                URL.revokeObjectURL(container.querySelector('video').src);
+            }
         }
 
         function switchCam() {
-            facingMode = facingMode === "environment" ? "user" : "environment";
+            facingMode = (facingMode === "environment") ? "user" : "environment";
             init();
         }
 
