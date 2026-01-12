@@ -5,60 +5,107 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Retro DV</title>
+    <title>Retro DV Camera</title>
     <style>
-        :root { --ios-red: #ff3b30; }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; font-family: -apple-system, system-ui; overflow: hidden; color: white; }
+        :root { --ios-red: #ff3b30; --ios-yellow: #f7d51d; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; font-family: 'Courier New', Courier, monospace; overflow: hidden; color: white; }
         
-        /* 螢幕預覽 */
+        /* 螢幕預覽區域 */
         #viewport { position: relative; width: 100%; height: 100%; overflow: hidden; display: flex; align-items: center; }
-        video { width: 100%; height: 100%; object-fit: cover; transition: transform 0.1s ease-out; }
+        
+        /* 畫質處理：故意降低一點清晰度並增加色彩偏向 */
+        video { 
+            width: 100%; height: 100%; object-fit: cover; 
+            filter: contrast(1.1) brightness(1.1) saturate(1.2) sepia(0.1);
+            transition: transform 0.1s ease-out;
+        }
 
-        /* DV 復古濾鏡 */
-        .overlay { position: absolute; inset: 0; pointer-events: none; z-index: 2;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.05) 50%); background-size: 100% 4px; opacity: 0.6; }
+        /* 1. 復古掃描線與色彩偏移層 */
+        .dv-fx { 
+            position: absolute; inset: 0; pointer-events: none; z-index: 2;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%); 
+            background-size: 100% 3px; 
+            opacity: 0.4; 
+        }
 
-        /* UI 元素 */
-        .rec-dot { position: absolute; top: 50px; left: 20px; color: var(--ios-red); font-weight: bold; display: none; z-index: 3; animation: blink 1s infinite; }
+        /* 2. 動態噪點層 (Retro Noise) */
+        .noise {
+            position: absolute; inset: 0; z-index: 3; pointer-events: none;
+            background-image: url("https://media.giphy.com/media/oEI9uWUicKgH6/giphy.gif"); /* 模擬雪花噪點 */
+            opacity: 0.05;
+            mix-blend-mode: overlay;
+        }
+
+        /* UI 文字 - 經典數碼黃 */
+        .ui-text {
+            position: absolute; font-family: 'Courier New', Courier, monospace;
+            color: var(--ios-yellow); text-shadow: 2px 2px #000; z-index: 4; font-weight: bold;
+        }
+        .rec-dot { top: 50px; left: 20px; color: var(--ios-red); display: none; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
-
-        .timestamp { position: absolute; bottom: 140px; left: 20px; font-family: 'Courier New', monospace; color: #f7d51d; text-shadow: 2px 2px #000; z-index: 3; line-height: 1.2; }
+        
+        .timestamp { bottom: 180px; left: 20px; line-height: 1.2; font-size: 1.1rem; }
+        .battery { top: 50px; right: 20px; }
 
         /* Zoom 控制 */
-        .zoom-wrap { position: absolute; right: 20px; top: 40%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: center; z-index: 10; }
-        .zoom-slider { appearance: none; -webkit-appearance: none; width: 180px; height: 4px; background: rgba(255,255,255,0.3); border-radius: 2px; transform: rotate(-90deg); margin: 80px 0; }
-        .zoom-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; border-radius: 50%; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+        .zoom-wrap { position: absolute; right: 15px; top: 40%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: center; z-index: 10; }
+        .zoom-slider { appearance: none; -webkit-appearance: none; width: 150px; height: 2px; background: rgba(255,255,255,0.4); transform: rotate(-90deg); margin: 70px 0; }
+        .zoom-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: white; }
+
+        /* 模式切換 */
+        .mode-selector { position: absolute; bottom: 130px; width: 100%; display: flex; justify-content: center; gap: 40px; z-index: 5; font-family: -apple-system; font-weight: bold; }
+        .mode { color: rgba(255,255,255,0.4); font-size: 14px; transition: 0.3s; }
+        .mode.active { color: var(--ios-yellow); transform: scale(1.1); }
 
         /* 底部控制欄 */
-        .controls { position: absolute; bottom: 0; width: 100%; height: 120px; background: rgba(0,0,0,0.6); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); display: flex; align-items: center; justify-content: space-around; z-index: 5; padding-bottom: env(safe-area-inset-bottom); }
+        .controls { position: absolute; bottom: 0; width: 100%; height: 120px; background: rgba(0,0,0,0.8); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); display: flex; align-items: center; justify-content: space-around; z-index: 5; padding-bottom: env(safe-area-inset-bottom); border-top: 1px solid rgba(255,255,255,0.1); }
         .btn-side { width: 45px; height: 45px; border-radius: 50%; background: rgba(255,255,255,0.1); border: none; color: white; font-size: 20px; }
-        .record-trigger { width: 72px; height: 72px; border-radius: 50%; background: white; padding: 4px; border: none; }
-        .record-inner { width: 100%; height: 100%; border-radius: 50%; background: var(--ios-red); transition: 0.3s; }
-        .recording .record-inner { border-radius: 8px; transform: scale(0.7); }
+        
+        .shutter-btn { width: 70px; height: 70px; border-radius: 50%; background: white; padding: 4px; border: none; }
+        .shutter-inner { width: 100%; height: 100%; border-radius: 50%; transition: 0.2s; }
+        .mode-video .shutter-inner { background: var(--ios-red); }
+        .mode-photo .shutter-inner { background: #eee; border: 2px solid #333; }
+        .recording .shutter-inner { border-radius: 6px; transform: scale(0.6); }
+
+        /* 預覽遮罩 */
+        #preview-layer { position: fixed; inset: 0; background: #000; z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
 
     <div id="viewport">
-        <div class="rec-dot" id="rec-indicator">● REC</div>
-        <div class="overlay"></div>
-        <div class="timestamp" id="ts"></div>
+        <div class="ui-text rec-dot" id="rec-indicator">● REC</div>
+        <div class="ui-text battery">F 12  [■■■]</div>
+        <div class="dv-fx"></div>
+        <div class="noise"></div>
+        <div class="ui-text timestamp" id="ts"></div>
         
         <video id="v" autoplay playsinline muted></video>
 
-        <div class="zoom-wrap">
+        <div class="zoom-wrap ui-text" style="text-shadow: none;">
             <span id="zoom-txt">1.0x</span>
             <input type="range" class="zoom-slider" id="z" min="1" max="4" step="0.1" value="1">
             <span>ZOOM</span>
         </div>
 
-        <div class="controls">
-            <button class="btn-side" onclick="switchCam()">🔄</button>
-            <button class="record-trigger" onclick="toggleRec()">
-                <div class="record-inner" id="btn-icon"></div>
-            </button>
-            <button class="btn-side" onclick="alert('錄影會自動下載到你的相簿或檔案中')">ℹ️</button>
+        <div class="mode-selector">
+            <span class="mode active" id="mode-video" onclick="setMode('video')">VIDEO</span>
+            <span class="mode" id="mode-photo" onclick="setMode('photo')">PHOTO</span>
         </div>
+
+        <div class="controls mode-video" id="ctrl-bar">
+            <button class="btn-side" onclick="switchCam()">🔄</button>
+            <button class="shutter-btn" onclick="handleAction()">
+                <div class="shutter-inner" id="shutter-ui"></div>
+            </button>
+            <button class="btn-side" onclick="alert('錄影/拍照後長按儲存至相簿')">🎞️</button>
+        </div>
+    </div>
+
+    <div id="preview-layer">
+        <div id="media-container" style="width: 90%; text-align: center;"></div>
+        <p style="color: var(--ios-yellow); margin: 20px 0; font-family: 'Courier New';">LONG PRESS TO SAVE</p>
+        <button onclick="closePreview()" style="background: transparent; color: white; border: 1px solid white; padding: 10px 30px; border-radius: 5px; font-family: 'Courier New';">BACK</button>
     </div>
 
     <script>
@@ -66,21 +113,48 @@
         const ts = document.getElementById('ts');
         const z = document.getElementById('z');
         const zTxt = document.getElementById('zoom-txt');
-        let mode = "environment";
+        const ctrlBar = document.getElementById('ctrl-bar');
+        
+        let currentMode = 'video';
+        let facingMode = "environment";
         let recorder, chunks = [], isRec = false;
 
         async function init() {
-            const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: mode }, audio: true });
+            if(window.stream) window.stream.getTracks().forEach(t => t.stop());
+            const s = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: facingMode, width: 1280 }, 
+                audio: true 
+            });
             v.srcObject = s;
             window.stream = s;
         }
 
-        function switchCam() { mode = mode === "user" ? "environment" : "user"; init(); }
+        function setMode(m) {
+            if (isRec) return;
+            currentMode = m;
+            document.querySelectorAll('.mode').forEach(el => el.classList.remove('active'));
+            document.getElementById(`mode-${m}`).classList.add('active');
+            ctrlBar.className = `controls mode-${m}`;
+        }
 
-        z.oninput = () => {
-            v.style.transform = `scale(${z.value})`;
-            zTxt.innerText = `${parseFloat(z.value).toFixed(1)}x`;
-        };
+        function handleAction() {
+            if (currentMode === 'video') toggleRec();
+            else takePhoto();
+        }
+
+        function takePhoto() {
+            const canvas = document.createElement('canvas');
+            canvas.width = v.videoWidth; canvas.height = v.videoHeight;
+            const ctx = canvas.getContext('2d');
+            const scale = parseFloat(z.value);
+            const w = canvas.width / scale;
+            const h = canvas.height / scale;
+            const x = (canvas.width - w) / 2;
+            const y = (canvas.height - h) / 2;
+            ctx.filter = "contrast(1.1) saturate(1.2) sepia(0.2)";
+            ctx.drawImage(v, x, y, w, h, 0, 0, canvas.width, canvas.height);
+            showPreview(canvas.toDataURL('image/jpeg'), 'photo');
+        }
 
         function toggleRec() {
             if (!isRec) {
@@ -89,20 +163,39 @@
                 recorder.ondataavailable = e => chunks.push(e.data);
                 recorder.onstop = () => {
                     const blob = new Blob(chunks, { type: 'video/mp4' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url; a.download = `DV_${Date.now()}.mp4`; a.click();
+                    showPreview(URL.createObjectURL(blob), 'video');
                 };
                 recorder.start();
                 document.getElementById('rec-indicator').style.display = 'block';
-                document.getElementById('btn-icon').parentElement.classList.add('recording');
+                ctrlBar.classList.add('recording');
+                isRec = true;
             } else {
                 recorder.stop();
                 document.getElementById('rec-indicator').style.display = 'none';
-                document.getElementById('btn-icon').parentElement.classList.remove('recording');
+                ctrlBar.classList.remove('recording');
+                isRec = false;
             }
-            isRec = !isRec;
         }
+
+        function showPreview(url, type) {
+            const container = document.getElementById('media-container');
+            container.innerHTML = type === 'video' 
+                ? `<video src="${url}" style="width:100%;" id="preview-content" controls autoplay></video>`
+                : `<img src="${url}" style="width:100%;" id="preview-content">`;
+            document.getElementById('preview-layer').style.display = 'flex';
+        }
+
+        function closePreview() {
+            document.getElementById('preview-layer').style.display = 'none';
+            document.getElementById('media-container').innerHTML = '';
+        }
+
+        function switchCam() { facingMode = facingMode === "user" ? "environment" : "user"; init(); }
+
+        z.oninput = () => {
+            v.style.transform = `scale(${z.value})`;
+            zTxt.innerText = `${parseFloat(z.value).toFixed(1)}x`;
+        };
 
         setInterval(() => {
             const d = new Date();
