@@ -5,84 +5,60 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Retro DV Camera</title>
+    <title>Retro DV</title>
     <style>
         :root { --ios-red: #ff3b30; --ios-yellow: #f7d51d; }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; font-family: 'Courier New', Courier, monospace; overflow: hidden; color: white; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; font-family: 'Courier New', monospace; overflow: hidden; color: white; -webkit-user-select: none; }
         
-        /* 螢幕預覽區域 */
-        #viewport { position: relative; width: 100%; height: 100%; overflow: hidden; display: flex; align-items: center; }
-        
-        /* 畫質處理：故意降低一點清晰度並增加色彩偏向 */
-        video { 
-            width: 100%; height: 100%; object-fit: cover; 
-            filter: contrast(1.1) brightness(1.1) saturate(1.2) sepia(0.1);
-            transition: transform 0.1s ease-out;
-        }
+        #viewport { position: relative; width: 100%; height: 100%; display: flex; align-items: center; background: #000; }
+        video { width: 100%; height: 100%; object-fit: cover; filter: contrast(1.1) saturate(1.2); transition: transform 0.1s; }
 
-        /* 1. 復古掃描線與色彩偏移層 */
-        .dv-fx { 
-            position: absolute; inset: 0; pointer-events: none; z-index: 2;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%); 
-            background-size: 100% 3px; 
-            opacity: 0.4; 
-        }
+        /* DV 效果 */
+        .dv-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 2; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%); background-size: 100% 3px; opacity: 0.3; }
+        .noise { position: absolute; inset: 0; z-index: 3; pointer-events: none; background: url('https://media.giphy.com/media/oEI9uWUicKgH6/giphy.gif'); opacity: 0.04; mix-blend-mode: screen; }
 
-        /* 2. 動態噪點層 (Retro Noise) */
-        .noise {
-            position: absolute; inset: 0; z-index: 3; pointer-events: none;
-            background-image: url("https://media.giphy.com/media/oEI9uWUicKgH6/giphy.gif"); /* 模擬雪花噪點 */
-            opacity: 0.05;
-            mix-blend-mode: overlay;
-        }
-
-        /* UI 文字 - 經典數碼黃 */
-        .ui-text {
-            position: absolute; font-family: 'Courier New', Courier, monospace;
-            color: var(--ios-yellow); text-shadow: 2px 2px #000; z-index: 4; font-weight: bold;
-        }
-        .rec-dot { top: 50px; left: 20px; color: var(--ios-red); display: none; animation: blink 1s infinite; }
+        /* 簡約 UI */
+        .ui-text { position: absolute; color: var(--ios-yellow); text-shadow: 2px 2px #000; z-index: 4; font-weight: bold; }
+        #rec-indicator { top: 50px; left: 20px; color: var(--ios-red); display: none; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0; } }
-        
-        .timestamp { bottom: 180px; left: 20px; line-height: 1.2; font-size: 1.1rem; }
-        .battery { top: 50px; right: 20px; }
+        .timestamp { bottom: 180px; left: 20px; font-size: 18px; line-height: 1.2; }
 
-        /* Zoom 控制 */
-        .zoom-wrap { position: absolute; right: 15px; top: 40%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: center; z-index: 10; }
+        /* Zoom */
+        .zoom-wrap { position: absolute; right: 15px; top: 40%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: center; z-index: 10; font-family: sans-serif; }
         .zoom-slider { appearance: none; -webkit-appearance: none; width: 150px; height: 2px; background: rgba(255,255,255,0.4); transform: rotate(-90deg); margin: 70px 0; }
-        .zoom-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: white; }
+        .zoom-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 25px; height: 25px; border-radius: 50%; background: white; }
 
         /* 模式切換 */
-        .mode-selector { position: absolute; bottom: 130px; width: 100%; display: flex; justify-content: center; gap: 40px; z-index: 5; font-family: -apple-system; font-weight: bold; }
-        .mode { color: rgba(255,255,255,0.4); font-size: 14px; transition: 0.3s; }
-        .mode.active { color: var(--ios-yellow); transform: scale(1.1); }
+        .mode-selector { position: absolute; bottom: 130px; width: 100%; display: flex; justify-content: center; gap: 40px; z-index: 5; font-family: -apple-system, sans-serif; font-weight: 600; }
+        .mode { color: rgba(255,255,255,0.4); font-size: 14px; transition: 0.2s; }
+        .mode.active { color: var(--ios-yellow); }
 
-        /* 底部控制欄 */
-        .controls { position: absolute; bottom: 0; width: 100%; height: 120px; background: rgba(0,0,0,0.8); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); display: flex; align-items: center; justify-content: space-around; z-index: 5; padding-bottom: env(safe-area-inset-bottom); border-top: 1px solid rgba(255,255,255,0.1); }
-        .btn-side { width: 45px; height: 45px; border-radius: 50%; background: rgba(255,255,255,0.1); border: none; color: white; font-size: 20px; }
+        /* 控制欄 */
+        .controls { position: absolute; bottom: 0; width: 100%; height: 120px; background: rgba(0,0,0,0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); display: flex; align-items: center; justify-content: space-around; z-index: 5; padding-bottom: env(safe-area-inset-bottom); }
+        .btn-side { width: 45px; height: 45px; border-radius: 50%; background: rgba(255,255,255,0.15); border: none; color: white; font-size: 20px; display: flex; align-items: center; justify-content: center; }
         
-        .shutter-btn { width: 70px; height: 70px; border-radius: 50%; background: white; padding: 4px; border: none; }
+        .shutter-btn { width: 72px; height: 72px; border-radius: 50%; background: white; padding: 4px; border: none; outline: none; }
         .shutter-inner { width: 100%; height: 100%; border-radius: 50%; transition: 0.2s; }
         .mode-video .shutter-inner { background: var(--ios-red); }
-        .mode-photo .shutter-inner { background: #eee; border: 2px solid #333; }
-        .recording .shutter-inner { border-radius: 6px; transform: scale(0.6); }
+        .mode-photo .shutter-inner { background: white; border: 2px solid #333; }
+        .recording .shutter-inner { border-radius: 8px; transform: scale(0.6); }
 
         /* 預覽遮罩 */
-        #preview-layer { position: fixed; inset: 0; background: #000; z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center; }
+        #preview-layer { position: fixed; inset: 0; background: #000; z-index: 1000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        .preview-media { width: 100%; max-height: 70vh; border-radius: 8px; object-fit: contain; }
     </style>
 </head>
 <body>
 
     <div id="viewport">
-        <div class="ui-text rec-dot" id="rec-indicator">● REC</div>
-        <div class="ui-text battery">F 12  [■■■]</div>
-        <div class="dv-fx"></div>
+        <div class="ui-text" id="rec-indicator">● REC</div>
+        <div class="dv-overlay"></div>
         <div class="noise"></div>
         <div class="ui-text timestamp" id="ts"></div>
         
         <video id="v" autoplay playsinline muted></video>
 
-        <div class="zoom-wrap ui-text" style="text-shadow: none;">
+        <div class="zoom-wrap ui-text">
             <span id="zoom-txt">1.0x</span>
             <input type="range" class="zoom-slider" id="z" min="1" max="4" step="0.1" value="1">
             <span>ZOOM</span>
@@ -95,17 +71,17 @@
 
         <div class="controls mode-video" id="ctrl-bar">
             <button class="btn-side" onclick="switchCam()">🔄</button>
-            <button class="shutter-btn" onclick="handleAction()">
+            <button class="shutter-btn" id="shutter-trigger">
                 <div class="shutter-inner" id="shutter-ui"></div>
             </button>
-            <button class="btn-side" onclick="alert('錄影/拍照後長按儲存至相簿')">🎞️</button>
+            <button class="btn-side">🎞️</button>
         </div>
     </div>
 
     <div id="preview-layer">
-        <div id="media-container" style="width: 90%; text-align: center;"></div>
-        <p style="color: var(--ios-yellow); margin: 20px 0; font-family: 'Courier New';">LONG PRESS TO SAVE</p>
-        <button onclick="closePreview()" style="background: transparent; color: white; border: 1px solid white; padding: 10px 30px; border-radius: 5px; font-family: 'Courier New';">BACK</button>
+        <div id="media-container" style="width: 100%; display: flex; justify-content: center;"></div>
+        <p style="color: var(--ios-yellow); margin: 25px 0; font-family: 'Courier New'; font-weight: bold; text-align: center;">長按上方內容儲存至相簿<br>LONG PRESS TO SAVE</p>
+        <button onclick="closePreview()" style="background: white; color: black; border: none; padding: 12px 40px; border-radius: 25px; font-weight: bold; font-family: sans-serif;">返回 BACK</button>
     </div>
 
     <script>
@@ -114,6 +90,7 @@
         const z = document.getElementById('z');
         const zTxt = document.getElementById('zoom-txt');
         const ctrlBar = document.getElementById('ctrl-bar');
+        const shutter = document.getElementById('shutter-trigger');
         
         let currentMode = 'video';
         let facingMode = "environment";
@@ -121,12 +98,14 @@
 
         async function init() {
             if(window.stream) window.stream.getTracks().forEach(t => t.stop());
-            const s = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: facingMode, width: 1280 }, 
-                audio: true 
-            });
-            v.srcObject = s;
-            window.stream = s;
+            try {
+                const s = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: facingMode, width: { ideal: 1280 }, height: { ideal: 720 } }, 
+                    audio: true 
+                });
+                v.srcObject = s;
+                window.stream = s;
+            } catch (e) { alert("請確保已開啟相機權限"); }
         }
 
         function setMode(m) {
@@ -137,10 +116,10 @@
             ctrlBar.className = `controls mode-${m}`;
         }
 
-        function handleAction() {
+        shutter.onclick = () => {
             if (currentMode === 'video') toggleRec();
             else takePhoto();
-        }
+        };
 
         function takePhoto() {
             const canvas = document.createElement('canvas');
@@ -151,7 +130,6 @@
             const h = canvas.height / scale;
             const x = (canvas.width - w) / 2;
             const y = (canvas.height - h) / 2;
-            ctx.filter = "contrast(1.1) saturate(1.2) sepia(0.2)";
             ctx.drawImage(v, x, y, w, h, 0, 0, canvas.width, canvas.height);
             showPreview(canvas.toDataURL('image/jpeg'), 'photo');
         }
@@ -159,11 +137,14 @@
         function toggleRec() {
             if (!isRec) {
                 chunks = [];
-                recorder = new MediaRecorder(window.stream, { mimeType: 'video/mp4' });
-                recorder.ondataavailable = e => chunks.push(e.data);
+                // iOS 錄影格式優化
+                const options = { mimeType: 'video/mp4' };
+                recorder = new MediaRecorder(window.stream, options);
+                recorder.ondataavailable = e => { if(e.data.size > 0) chunks.push(e.data); };
                 recorder.onstop = () => {
                     const blob = new Blob(chunks, { type: 'video/mp4' });
-                    showPreview(URL.createObjectURL(blob), 'video');
+                    const videoURL = URL.createObjectURL(blob);
+                    showPreview(videoURL, 'video');
                 };
                 recorder.start();
                 document.getElementById('rec-indicator').style.display = 'block';
@@ -179,9 +160,11 @@
 
         function showPreview(url, type) {
             const container = document.getElementById('media-container');
-            container.innerHTML = type === 'video' 
-                ? `<video src="${url}" style="width:100%;" id="preview-content" controls autoplay></video>`
-                : `<img src="${url}" style="width:100%;" id="preview-content">`;
+            if (type === 'video') {
+                container.innerHTML = `<video src="${url}" class="preview-media" controls playsinline autoplay loop></video>`;
+            } else {
+                container.innerHTML = `<img src="${url}" class="preview-media">`;
+            }
             document.getElementById('preview-layer').style.display = 'flex';
         }
 
@@ -190,7 +173,10 @@
             document.getElementById('media-container').innerHTML = '';
         }
 
-        function switchCam() { facingMode = facingMode === "user" ? "environment" : "user"; init(); }
+        function switchCam() {
+            facingMode = facingMode === "environment" ? "user" : "environment";
+            init();
+        }
 
         z.oninput = () => {
             v.style.transform = `scale(${z.value})`;
